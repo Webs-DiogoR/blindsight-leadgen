@@ -9,9 +9,9 @@ Discovers and/or scores companies against Blindsight's ideal customer profile (I
 
 ## Paths (this installation)
 
-- Leads CSV: `F:\_WORKY\blindsight\lead-gen\data\leads.csv`
-- Run reports: `F:\_WORKY\blindsight\lead-gen\runs\`
-- Scripts: `F:\_WORKY\blindsight\lead-gen\.claude\skills\find-leads\scripts\`
+- Leads CSV: `F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv`
+- Run reports: `F:\_WORKY\blindsight\GITHUB\lead-gen\runs\`
+- Scripts: `F:\_WORKY\blindsight\GITHUB\lead-gen\.claude\skills\find-leads\scripts\`
 
 ## Modes
 
@@ -33,13 +33,13 @@ When search across segments turns up the same company more than once (e.g. it ma
 
 For every candidate company (from discovery search results or the provided list):
 
-1. **Freshness check.** Run `python scripts/csv_store.py check-fresh --csv "F:\_WORKY\blindsight\lead-gen\data\leads.csv" --domain <domain>`. If it prints `fresh`, skip research entirely — record it under `skipped` with reason "already fresh in CSV" and move to the next company. If it prints anything for a row whose `status` is `disqualified` or `customer`, also skip it (don't resurface disqualified/customer companies in `discover`).
+1. **Freshness check.** Run `python scripts/csv_store.py check-fresh --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --domain <domain>`. If it prints `fresh`, skip research entirely — record it under `skipped` with reason "already fresh in CSV" and move to the next company. If it prints anything for a row whose `status` is `disqualified` or `customer`, also skip it (don't resurface disqualified/customer companies in `discover`).
 2. **Stage 1 triage (1 search).** Do one broad web search on the company. If it's clearly a hard disqualifier — a government entity, not an active business, wildly outside the ~50–1000 employee range, or a pre-seed startup with no AI-native angle — stop here. Set `segment_fit: "Poor fit"` and don't spend further search budget on this company; it doesn't count toward `discover`'s target.
 3. **Stage 2 triage (up to 3 more searches, 2–4 total).** Search for industry/vertical and AI-adoption signals (company site, news, job postings). If by search 4 there's no signal of *either* a regulated/AI-native vertical *or* active AI adoption, stop and record it under `skipped` with reason "Weak signal / insufficient public info" rather than spending the 5th search chasing buyer details for a probable non-fit.
 4. **Full research (up to 1 more search, 5 total).** Only for companies that cleared stage 2: search for regulatory-exposure evidence (GDPR/HIPAA/SOC2/EU AI Act/FADP mentions) and a likely buyer (named CEO/CTO/technical leader from publicly published sources only — no LinkedIn scraping or gated-site access).
 5. **Classify.** From what was found, produce a classification object using the exact allowed values below.
 6. **Score.** Run `python scripts/scoring.py score --input '<classification JSON>'` to get `score_total`, `score_breakdown`, `score_breakdown_str`, and `tier`.
-7. **Persist.** Merge the classification fields and the score fields into one row (see "CSV row — column reference" below) and run `python scripts/csv_store.py upsert --csv "F:\_WORKY\blindsight\lead-gen\data\leads.csv" --input '<row JSON>'`.
+7. **Persist.** Merge the classification fields and the score fields into one row (see "CSV row — column reference" below) and run `python scripts/csv_store.py upsert --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --input '<row JSON>'`.
 8. **Accumulate** the row into this run's `results` list (or into `skipped` with a reason, for anything stopped at freshness or triage).
 
 Research companies in parallel (one subagent per company via the Agent tool), 5–8 at a time, each following steps 1–8 independently; aggregate afterward.
@@ -111,7 +111,7 @@ Only store what's already publicly published (name + title). Never add personal 
 
 Run:
 ```
-python scripts/report.py --mode <discover|score-list> --segment <segment-or-omit> --date <YYYY-MM-DD> --results '<JSON list of result rows>' --skipped '<JSON list of {company_name, reason}>' --out "F:\_WORKY\blindsight\lead-gen\runs\<YYYY-MM-DD>-<mode>-<segment-or-list>.md"
+python scripts/report.py --mode <discover|score-list> --segment <segment-or-omit> --date <YYYY-MM-DD> --results '<JSON list of result rows>' --skipped '<JSON list of {company_name, reason}>' --out "F:\_WORKY\blindsight\GITHUB\lead-gen\runs\<YYYY-MM-DD>-<mode>-<segment-or-list>.md"
 ```
 
 Report the output file path and a one-paragraph summary back to the user.
