@@ -5,28 +5,30 @@ import unittest
 from datetime import date
 
 from scripts.csv_store import (
-    load_leads, save_leads, upsert_lead, is_active, FIELDNAMES,
+    load_leads, save_leads, upsert_lead, is_active, is_watchlist, FIELDNAMES,
 )
 
 BASE_FIELDS = {
     "domain": "example.com",
     "company_name": "Example Inc",
-    "segment_fit": "Primary ICP",
-    "company_stage": "Established/Mid-market",
-    "vertical": "Healthcare",
-    "ai_adoption": "Strong",
-    "regulatory_exposure": "Explicit",
-    "size_fit": "In range (50-500)",
+    "icp_match": "ICP1",
+    "vertical": "",
+    "persona_match": "1B",
+    "company_stage": "On-target",
+    "ai_native_maturity": "Strong",
+    "regulatory_data_exposure": "None apparent",
+    "agent_deployment_stage": "None",
+    "geo_fit": "EU",
+    "size_fit": "In range (20-200)",
     "buyer_name": "Jane Doe",
     "buyer_title": "CTO",
     "buyer_accessibility": "Named",
     "wrong_fit_risk": "False",
-    "startup_stigma_routing": "Direct sales viable",
     "score_total": "90",
-    "score_breakdown": "segment_fit=30;ai_adoption=20",
+    "score_breakdown": "icp_match=25;core_signal=20",
     "tier": "Hot",
-    "reachability_notes": "Speaking at HealthTech Summit 2026",
-    "rationale": "Strong AI adoption, explicit HIPAA exposure",
+    "reachability_notes": "Speaking at AI Native Summit 2026",
+    "rationale": "Strong AI-native product signal, EU-based",
     "sources": "https://example.com/about",
     "confidence": "medium",
     "status": "active",
@@ -46,35 +48,35 @@ class CsvStoreTests(unittest.TestCase):
         self.assertEqual(load_leads(self.csv_path), {})
 
     def test_upsert_lead_inserts_new_row_with_first_seen_and_last_researched_set(self):
-        today = date(2026, 7, 8)
+        today = date(2026, 7, 9)
         leads, action = upsert_lead({}, BASE_FIELDS, today)
         self.assertEqual(action, "inserted")
         row = leads["example.com"]
-        self.assertEqual(row["first_seen"], "2026-07-08")
-        self.assertEqual(row["last_researched"], "2026-07-08")
+        self.assertEqual(row["first_seen"], "2026-07-09")
+        self.assertEqual(row["last_researched"], "2026-07-09")
         self.assertEqual(row["company_name"], "Example Inc")
 
     def test_upsert_lead_skips_when_existing_row_is_fresh(self):
-        today = date(2026, 7, 8)
+        today = date(2026, 7, 9)
         leads, _ = upsert_lead({}, BASE_FIELDS, today)
         later = date(2026, 7, 20)
         leads2, action = upsert_lead(leads, BASE_FIELDS, later)
         self.assertEqual(action, "skipped_fresh")
-        self.assertEqual(leads2["example.com"]["last_researched"], "2026-07-08")
+        self.assertEqual(leads2["example.com"]["last_researched"], "2026-07-09")
 
     def test_upsert_lead_updates_when_existing_row_is_stale(self):
-        today = date(2026, 7, 8)
+        today = date(2026, 7, 9)
         leads, _ = upsert_lead({}, BASE_FIELDS, today)
         much_later = date(2026, 9, 1)
         updated_fields = dict(BASE_FIELDS, tier="Warm", score_total="60")
         leads2, action = upsert_lead(leads, updated_fields, much_later)
         self.assertEqual(action, "updated")
         self.assertEqual(leads2["example.com"]["last_researched"], "2026-09-01")
-        self.assertEqual(leads2["example.com"]["first_seen"], "2026-07-08")
+        self.assertEqual(leads2["example.com"]["first_seen"], "2026-07-09")
         self.assertEqual(leads2["example.com"]["tier"], "Warm")
 
     def test_upsert_lead_force_refresh_overrides_freshness(self):
-        today = date(2026, 7, 8)
+        today = date(2026, 7, 9)
         leads, _ = upsert_lead({}, BASE_FIELDS, today)
         later = date(2026, 7, 20)
         forced_fields = dict(BASE_FIELDS, force_refresh=True, tier="Cold")
@@ -83,7 +85,7 @@ class CsvStoreTests(unittest.TestCase):
         self.assertEqual(leads2["example.com"]["tier"], "Cold")
 
     def test_save_and_load_roundtrip_preserves_data(self):
-        today = date(2026, 7, 8)
+        today = date(2026, 7, 9)
         leads, _ = upsert_lead({}, BASE_FIELDS, today)
         save_leads(self.csv_path, leads)
         reloaded = load_leads(self.csv_path)
@@ -95,6 +97,12 @@ class CsvStoreTests(unittest.TestCase):
 
     def test_is_active_false_when_status_disqualified(self):
         self.assertFalse(is_active({"status": "disqualified"}))
+
+    def test_is_watchlist_true_when_status_watchlist(self):
+        self.assertTrue(is_watchlist({"status": "watchlist"}))
+
+    def test_is_watchlist_false_when_status_active(self):
+        self.assertFalse(is_watchlist({"status": "active"}))
 
 
 if __name__ == "__main__":

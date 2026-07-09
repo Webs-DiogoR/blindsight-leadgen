@@ -11,12 +11,13 @@ import os
 from datetime import date, datetime
 
 FIELDNAMES = [
-    "domain", "company_name", "segment_fit", "company_stage", "vertical",
-    "ai_adoption", "regulatory_exposure", "size_fit", "buyer_name",
+    "domain", "company_name", "icp_match", "vertical", "persona_match",
+    "company_stage", "ai_native_maturity", "regulatory_data_exposure",
+    "agent_deployment_stage", "geo_fit", "size_fit", "buyer_name",
     "buyer_title", "buyer_accessibility", "wrong_fit_risk",
-    "startup_stigma_routing", "score_total", "score_breakdown", "tier",
-    "reachability_notes", "rationale", "sources", "confidence",
-    "first_seen", "last_researched", "status", "outcome",
+    "score_total", "score_breakdown", "tier", "reachability_notes",
+    "rationale", "sources", "confidence", "first_seen", "last_researched",
+    "status", "outcome",
 ]
 
 DEFAULT_FRESHNESS_DAYS = 30
@@ -79,6 +80,10 @@ def upsert_lead(leads: dict, fields: dict, today: date,
 
 def is_active(row: dict) -> bool:
     return row.get("status", "active") == "active"
+
+
+def is_watchlist(row: dict) -> bool:
+    return row.get("status") == "watchlist"
 
 
 def _cli(argv=None):
