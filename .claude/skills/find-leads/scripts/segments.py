@@ -1,22 +1,18 @@
-"""Segment weighting for discover-mode target-count splitting.
+"""Segment (ICP) weighting for discover-mode target-count splitting.
 
-Weights are ~80/20 toward Blindsight's validated ICP segments (healthcare,
-finance, legal, AI-native) over its exploratory ones (consultancies,
-smart-factories), with the secondary ICP (AI-native startups selling into
-regulated verticals) weighted in between.
+Weights reflect priority sequencing from the ICP base: ICP1 and ICP2 are
+where the team spends now (equal weight), ICP3 is seeded at a lighter
+weight since it's pipeline-building for the Authorization Broker, not
+actively closed yet.
 """
 
 import argparse
 import json
 
 SEGMENT_WEIGHTS = {
-    "healthcare": 4,
-    "finance": 4,
-    "legal": 4,
-    "ai-native": 4,
-    "ai-native-startups": 2,
-    "consultancies": 1,
-    "smart-factories": 1,
+    "icp1": 2,
+    "icp2": 2,
+    "icp3": 1,
 }
 
 ALL_SEGMENTS = list(SEGMENT_WEIGHTS)
