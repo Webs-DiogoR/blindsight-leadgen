@@ -13,6 +13,15 @@ Discovers and/or scores companies against Blindsight's ICP (three tiers: AI-Nati
 - Run reports: `F:\_WORKY\blindsight\GITHUB\lead-gen\runs\`
 - Scripts: `F:\_WORKY\blindsight\GITHUB\lead-gen\.claude\skills\find-leads\scripts\`
 
+## Firecrawl usage
+
+Research subagents use the Firecrawl CLI (`firecrawl search|scrape|map`) instead of Claude's built-in `WebSearch` for the per-company pipeline below. Write Firecrawl output to `.firecrawl/` and read it back with `grep`/`head` rather than dumping full page content into context.
+
+- **Preflight (once per run, not per company).** Run `firecrawl --status`. If it reports not authenticated or the CLI isn't found, note "Firecrawl unavailable — falling back to WebSearch for this run" and use Claude's built-in `WebSearch` for every stage below, for every company, for the rest of the run. Do not fail the run.
+- **Allowed targets.** Only the candidate's own domain and public press/news pages ever get passed to `firecrawl search`/`scrape`/`map`. Never LinkedIn, Crunchbase paid pages, LinkedIn Sales Navigator, or any gated/auth-walled site.
+- **Never use `--redact-pii`** on `firecrawl scrape` calls — it risks stripping the buyer's name, which this skill deliberately keeps (name + title only). The no-email/no-phone rule is enforced when writing the CSV row, not by this flag.
+- **Per-call fallback.** If a single `firecrawl` command fails (blocked, timeout, rate-limited) or returns thin/empty content, retry once with `--wait-for 3000`; if it still fails or is still thin, fall back to `WebSearch` for that one step only. One bad Firecrawl call never fails the whole company.
+
 ## The ICP
 
 Three ICPs, sequenced by priority — ICP1 and ICP2 are where the team spends now; ICP3 is a watchlist populated today but not actively closed until the Authorization Broker is past prototype.
