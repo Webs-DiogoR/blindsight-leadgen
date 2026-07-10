@@ -72,7 +72,7 @@ Given a list of company names/domains/URLs (pasted, or from a file), skips disco
 
 No arguments. Re-researches every `status = watchlist` row in the CSV (ICP3 leads seeded via `discover`/`score-list`), regardless of the normal 30-day freshness window — refreshing watchlist rows on a schedule is this mode's entire purpose. For each row:
 
-1. Re-run the standard per-company research pipeline (same ~5-search budget, same triage stages as discover/score-list).
+1. Re-run the standard per-company research pipeline (same ~4-call budget, same triage stages as discover/score-list).
 2. Re-classify and re-score; update `agent_deployment_stage` and all other fields; bump `last_researched` (pass `force_refresh: true` to `csv_store.py upsert`).
 3. If the new `agent_deployment_stage` is `Production agents` → set `status: active` (promoted off the watchlist, regardless of overall tier).
 4. If the company is now clearly dead or has pivoted away from agents entirely → set `status: disqualified`.
