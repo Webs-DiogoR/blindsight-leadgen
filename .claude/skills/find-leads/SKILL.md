@@ -173,6 +173,8 @@ The row you pass as `--input '<row JSON>'` to `csv_store.py upsert` must have on
 
 ## Error handling
 
+- **A Firecrawl call fails or returns thin/empty content** (blocked, timeout, rate-limited, unrendered SPA) — retry once with `--wait-for 3000`, then fall back to `WebSearch` for that one step. See "Firecrawl usage" above.
+- **Firecrawl unavailable for the whole run** (no `FIRECRAWL_API_KEY`, CLI not installed) — detected once via `firecrawl --status` at the start of the run; fall back to `WebSearch` for every step, run proceeds normally rather than aborting.
 - **Conflicting signals across sources** (e.g. one source says 80 employees, another says 400) — keep the most authoritative/recent source, note the discrepancy in `rationale`, and set `confidence` to `low` for that company rather than silently picking one value.
 - **A research subagent errors out or times out** — retry that company once. If it still fails, record it under `skipped` with reason "Research failed" so it's visible and re-triable next run.
 - **Web search starts failing broadly mid-run** (rate limiting/throttling) — stop the run gracefully rather than pushing through with empty results, and report how far it got, e.g. "8 of target 15 researched before search access degraded."
