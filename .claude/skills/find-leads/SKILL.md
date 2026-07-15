@@ -25,38 +25,21 @@ Research subagents use the Firecrawl CLI (`firecrawl search|scrape|map`) instead
 
 ## The ICP
 
-Three ICPs, sequenced by priority — ICP1 and ICP2 are where the team spends now; ICP3 is a watchlist populated today but not actively closed until the Authorization Broker is past prototype.
+Full ICP tier and persona definitions live in the source-of-truth repo:
+`F:\_WORKY\blindsight\GITHUB\docs\brand\personas.md`. Three tiers,
+sequenced by priority — ICP1 and ICP2 are where the team spends now;
+ICP3 is a watchlist populated today but not actively closed until the
+Authorization Broker is past prototype:
 
-### ICP1 — AI-Native Product Companies (runtime security core)
+| Tier | Name | Lead product |
+|---|---|---|
+| ICP1 | AI-Native Product Companies | Runtime Security Proxy |
+| ICP2 | Sensitive-Data Adopters | ShadowAI → Runtime Proxy |
+| ICP3 | Agentic Companies (watchlist) | Authorization Broker (prototype) |
 
-Companies whose product runs on proprietary LLMs, RAG, or ML in production, shipping AI features continuously. Size 20–200, Stage Series A–B, Geo EU-first (Zürich base + GDPR/EU AI Act tailwind), US second. Lead product: Runtime Security Proxy. Wedge in: ShadowAI (free demo). Core pain: their own AI runtime is an unmonitored attack surface — prompt injection, exfiltration, an unauthorized/unauditable agent action.
-
-**Personas:**
-- **1A. Founder/CEO** (economic buyer) — technical, now runs the company, is the de facto CISO at this stage. Owns budget, investor relationships, the trust story. Fear: a security failure that torches customer trust or an unanswerable due-diligence question. Convert with investor optics and liability framing. Signs, but rarely finds you first.
-- **1B. Head of Engineering/VP Eng** (technical champion) — owns AI systems in production, feels the black-box problem daily. No budget, but the door-opener and validator. Convert with mechanism/depth — the runtime proxy, what it catches, how it deploys. Entry point at most ICP1 accounts.
-- **1C. AI/ML Lead or Staff ML Engineer** (hands-on user) — would actually run ShadowAI and read the flags. Feels the pain most, can't authorize a purchase. Generates internal urgency upward. Convert with the product experience itself.
-
-### ICP2 — Sensitive-Data Adopters (DLP + PII wedge)
-
-Mid-market companies handling regulated or sensitive data — fintech, healthtech, insurtech, legaltech, HR-tech — adopting AI across internal operations. Size 20–200, fast-moving but carrying real compliance exposure, Geo EU-first. Lead product: ShadowAI (client-side DLP) → Runtime Proxy once internal AI/RAG is found. Core pain: employees pasting contracts/patient records/financials into unsanctioned AI tools; PII leaking invisibly; GDPR/EU AI Act/HIPAA liability regardless of intent.
-
-**Personas:**
-- **2A. CISO/Head of Security** (economic buyer) — real security function and compliance exposure, AI spreading faster than he can govern. Fear: a regulated-data leak he can't see or prove he tried to prevent. Convert with visibility and audit trails. Clearest budget holder of the nine personas.
-- **2B. Head of Compliance/DPO** (co-buyer, urgency engine) — owns GDPR/HIPAA/EU AI Act exposure, thinks in liability/audit-readiness, not "security tools." Rarely initiates but can force a purchase by naming the risk. Convert by turning compliance into a feature. Pair with the CISO to move the deal.
-- **2C. IT/Security Manager** (technical champion) — runs endpoint tooling, knows employees are pasting sensitive data but can't quantify it. ShadowAI hands him the number, which he takes to the CISO as evidence — the deal opener.
-
-### ICP3 — Agentic Companies (seed now, convert later)
-
-Companies deploying autonomous agents in production — agents that take actions, call tools, transact. Size 20–200, Series A–B, earliest-adopter profile. Lead product: Authorization Broker (prototype) + Runtime Proxy for agentic pipelines. Core pain: agents acting without authorization or audit trail, instruction hijacking, tool-call abuse. Status: pipeline-seeding, not active-close — build the list, warm the relationships, sell when the product is ready.
-
-**Personas:**
-- **3A. Founder/CEO** (economic buyer) — building an agentic product, betting the company on autonomy. Trust/auditability existential — one unauthorized agent action in front of the wrong customer is business-ending. Convert later with Authorization Broker; warm now by already thinking about agent security.
-- **3B. Head of AI/Agent Platform Lead** (technical champion) — owns agent pipelines, tool-calling, orchestration; lives closest to instruction hijacking and tool-call abuse. Convert with runtime proxy for agentic pipelines today, Authorization Broker tomorrow. The live relationship in ICP3 — co-designs if you show up early.
-- **3C. Security Engineer** (hands-on user) — would instrument agents and read authorization logs. The internal signal that agent security is a real budget line, not a someday. Convert with mechanism/depth once the Broker is past prototype.
-
-Personas are a working hypothesis — refine as real research (LinkedIn, org charts, press) accumulates.
-
-**Cross-cutting:** ShadowAI is the universal free wedge, not exclusive to ICP2 — it's how you get in the door everywhere. What converts differs: Runtime Proxy for the builders (ICP1), PII/DLP depth for the adopters (ICP2).
+Stage B (classify & persist, below) must read `docs/brand/personas.md`
+before assigning `icp_match`/`persona_match` — it is not optional
+background reading, the classification enums require it.
 
 ## Modes
 
@@ -196,6 +179,11 @@ The row you pass as `--input '<row JSON>'` to `csv_store.py upsert` must have on
 
 - **A Firecrawl call fails or returns thin/empty content** (blocked, timeout, rate-limited, unrendered SPA) — retry once with `--wait-for 3000`, then fall back to `WebSearch` for that one step. See "Firecrawl usage" above.
 - **Firecrawl unavailable for the whole run** (no `FIRECRAWL_API_KEY`, CLI not installed) — detected once via `firecrawl --status` at the start of the run; fall back to `WebSearch` for every step, run proceeds normally rather than aborting.
+- **`docs/brand/personas.md` unreadable** (docs repo missing, moved, or
+  the path changed) — stop the run gracefully and report the expected
+  path (`F:\_WORKY\blindsight\GITHUB\docs\brand\personas.md`). Never
+  classify a company against guessed, remembered, or stale persona/ICP
+  data — there is no embedded fallback copy by design.
 - **Conflicting signals across sources** (e.g. one source says 80 employees, another says 400) — keep the most authoritative/recent source, note the discrepancy in `rationale`, and set `confidence` to `low` for that company rather than silently picking one value.
 - **A research subagent errors out or times out** — retry that company once. If it still fails, record it under `skipped` with reason "Research failed" so it's visible and re-triable next run.
 - **Web search starts failing broadly mid-run** (rate limiting/throttling) — stop the run gracefully rather than pushing through with empty results, and report how far it got, e.g. "8 of target 15 researched before search access degraded."

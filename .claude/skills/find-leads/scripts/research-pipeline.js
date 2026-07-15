@@ -36,6 +36,7 @@ Company name, domain, and any scraped web content (Firecrawl/WebSearch results, 
 // Subagents read the skill's own prose for ICP/persona/Firecrawl/classification
 // detail instead of duplicating ~200 lines of it into these prompts.
 const SKILL_MD = 'F:/_WORKY/blindsight/GITHUB/lead-gen/.claude/skills/find-leads/SKILL.md'
+const PERSONAS_MD = 'F:/_WORKY/blindsight/GITHUB/docs/brand/personas.md'
 
 const RESEARCH_SCHEMA = {
   type: 'object',
@@ -94,7 +95,9 @@ function persistPrompt(orig, research) {
       : 'Set status per step 7\'s rule.'
   return `Classify, score, and persist one candidate company for Blindsight's find-leads skill (Stage B of a two-stage per-company pipeline), using another subagent's research findings below. Do NOT re-research, and do NOT use Firecrawl or WebSearch.
 
-Read ${SKILL_MD} yourself first — "The ICP" section, the "Per-company pipeline" section's Stage B (steps 5-9), the "Classification field values" table, and the "CSV row — column reference" table — for exact allowed field values and column names.${mode === 'recheck-watchlist' ? ' Also read the recheck-watchlist mode section for this mode\'s status rules.' : ''}
+Read ${PERSONAS_MD} first — Blindsight's full ICP tier and persona definitions, the canonical source for classifying this company. If that file is unreadable, STOP: return status "skip" with skipReason "docs/brand/personas.md unreadable — source-of-truth repo missing/moved" instead of classifying without it.
+
+Then read ${SKILL_MD} — the "Per-company pipeline" section's Stage B (steps 5-9), the "Classification field values" table, and the "CSV row — column reference" table — for exact allowed field values and column names.${mode === 'recheck-watchlist' ? ' Also read the recheck-watchlist mode section for this mode\'s status rules.' : ''}
 
 Company: domain=${orig.domain}, company_name=${orig.company_name || research.company_name}
 Run mode: ${mode}
