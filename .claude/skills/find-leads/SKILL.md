@@ -72,17 +72,18 @@ Given a list of company names/domains/URLs (pasted, or from a file), skips disco
 
 No arguments. Re-researches every `status = watchlist` row in the CSV (ICP3 leads seeded via `discover`/`score-list`), regardless of the normal 30-day freshness window — refreshing watchlist rows on a schedule is this mode's entire purpose. For each row:
 
-1. Re-run the standard per-company research pipeline (same ~4-call budget, same triage stages as discover/score-list).
+1. Re-run the per-company pipeline (see "Per-company pipeline" below), same ~4-call budget and triage stages as discover/score-list, dispatched via the same Workflow `pipeline()` call with `mode: "recheck-watchlist"` — this bypasses the freshness check (Stage A step 1) by design.
 2. Re-classify and re-score; update `agent_deployment_stage` and all other fields; bump `last_researched` (pass `force_refresh: true` to `csv_store.py upsert`).
 3. If the new `agent_deployment_stage` is `Production agents` → set `status: active` (promoted off the watchlist, regardless of overall tier).
 4. If the company is now clearly dead or has pivoted away from agents entirely → set `status: disqualified`.
 5. Otherwise → leave `status: watchlist`, fields refreshed.
-6. Accumulate one entry per company into a `rechecked` list: `{company_name, domain, prev_status, new_status, prev_agent_deployment_stage, new_agent_deployment_stage, score_total, tier}`.
+6. Accumulate one entry per company into a `rechecked` list: `{company_name, domain, prev_status, new_status, prev_agent_deployment_stage, new_agent_deployment_stage, score_total, tier}`. This is produced automatically as the `rechecked` field returned by `research-pipeline.js` for this mode — no manual accumulation needed.
 
 After processing all watchlist rows, run:
 ```
 python scripts/report.py --mode recheck-watchlist --date <YYYY-MM-DD> --rechecked '<JSON list of rechecked dicts>' --out "F:\_WORKY\blindsight\GITHUB\lead-gen\runs\<YYYY-MM-DD>-watchlist-recheck.md"
 ```
+using the `rechecked` list returned by the Workflow pipeline run.
 
 This mode is meant to run on a weekly schedule (wired up separately via a Claude Code scheduled routine that invokes this skill with `recheck-watchlist` — not something this skill sets up itself). No push notification; the written report is checked like any other run report.
 
@@ -102,19 +103,38 @@ When search across segments turns up the same company more than once (e.g. it ma
 
 ## Per-company pipeline
 
-For every candidate company (from discovery search results or the provided list):
+For every candidate company (from discovery search results or the provided list), research and persistence run as two subagent stages — Stage A (Research) and Stage B (Classify & Persist) — dispatched per-company via the Workflow tool's `pipeline()` (see "Dispatch" below) so a company that clears Stage A early moves straight into Stage B instead of idling for batch-mates.
 
-1. **Freshness check.** Run `python scripts/csv_store.py check-fresh --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --domain <domain>`. If it prints `fresh`, skip research entirely — record it under `skipped` with reason "already fresh in CSV" and move to the next company. If it prints anything for a row whose `status` is `disqualified` or `customer`, also skip it (don't resurface disqualified/customer companies in `discover`). Rows with `status: watchlist` ARE resurfaced normally by `discover`/`score-list` freshness rules — only `recheck-watchlist` treats them specially (bypassing freshness entirely).
+### Stage A — Research (steps 1–4)
+
+Given a company's `domain`, `company_name`, and the run's `mode`:
+
+1. **Freshness check.** Run `python scripts/csv_store.py check-fresh --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --domain <domain>`. If it prints `fresh`, skip research entirely — record it under `skipped` with reason "already fresh in CSV" and move to the next company. If it prints anything for a row whose `status` is `disqualified` or `customer`, also skip it (don't resurface disqualified/customer companies in `discover`). Rows with `status: watchlist` ARE resurfaced normally by `discover`/`score-list` freshness rules — only `recheck-watchlist` treats them specially (bypassing freshness entirely). **Skip this step entirely when `mode` is `recheck-watchlist`** — that mode bypasses freshness by design.
 2. **Stage 1 triage (1 call).** Run `firecrawl search "<company name>" --scrape -o .firecrawl/<domain>-stage1.json --json` (see "Firecrawl usage" above for the preflight/fallback/allowed-targets rules). If it's clearly a hard disqualifier — a government entity, not an active business, wildly outside the ~20–200 employee range, or a pre-seed startup with no AI angle at all — stop here. Set `icp_match: "Poor fit"` and don't spend further budget on this company; it doesn't count toward `discover`'s target.
 3. **Stage 2 on-site research (up to 2 calls, 3 total).** Scrape the candidate's homepage: `firecrawl scrape "<homepage-url>" --only-main-content --format markdown,links -o .firecrawl/<domain>-home.json` (output is JSON with `markdown`/`links` fields, not raw markdown text). From the links it returns, pick the 1–2 most promising on-site pages (About/Team for buyer info, Careers for agent/AI hiring signal, Product for AI-native depth) and scrape them together: `firecrawl scrape "<url1>" "<url2>" -o .firecrawl/`. Together these inform `ai_native_maturity`, `regulatory_data_exposure`, `agent_deployment_stage`, `buyer_name`, and `buyer_title` — no separate call budget per dimension. If the homepage's links list has no About/Team/Careers/Product-style page — not simply "few links"; most homepages return several, just rarely the right category — escalate to `firecrawl map "<homepage-url>" --search "about"` (or `"careers"`) to locate the page directly, then scrape it. In practice this triggers often (many modern marketing sites bury About/Careers in a footer or JS-driven nav that the homepage scrape doesn't surface) — budget for it rather than treating it as rare. If there's still no signal on any of the three core dimensions after this stage, stop and record it under `skipped` with reason "Weak signal / insufficient public info".
 4. **Stage 3 off-site research (up to 1 call, 4 total).** Only for companies that cleared stage 2: run `firecrawl search "<company name> CEO OR CTO OR founder" --scrape -o .firecrawl/<domain>-stage3.json --json` for anything not already found on-site in stage 2 — a likely buyer (named CEO/CTO/technical leader from publicly published sources only — no LinkedIn scraping or gated-site access) and geography (EU vs. US vs. other, from company site/press/registration).
-5. **Classify.** From what was found, produce a classification object using the exact allowed values below.
-6. **Score.** Run `python scripts/scoring.py score --input '<classification JSON>'` to get `score_total`, `score_breakdown`, `score_breakdown_str`, and `tier`.
-7. **Set status.** `icp_match == "ICP3"` → `status: "watchlist"`, unconditionally, even if `agent_deployment_stage` is already `"Production agents"` on this first pass (promotion only happens on a later `recheck-watchlist` run). `icp_match` in `{"ICP1", "ICP2"}` → `status: "active"` as normal. `icp_match == "Poor fit"` → don't persist to the CSV at all (record under `skipped` per stage-1 triage above).
-8. **Persist.** Merge the classification fields, status, and score fields into one row (see "CSV row — column reference" below) and run `python scripts/csv_store.py upsert --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --input '<row JSON>'`.
-9. **Accumulate** the row into this run's `results` list (or into `skipped` with a reason, for anything stopped at freshness or triage).
 
-Research companies in parallel (one subagent per company via the Agent tool), 5–8 at a time, each following steps 1–9 independently; aggregate afterward.
+Stop-and-skip points above (fresh, disqualified/customer, poor fit at triage, weak signal after stage 2, unresolvable domain in `score-list`) become a `skipped` entry with a reason. Otherwise, hand off a written findings summary — buyer, maturity/exposure/deployment signals, geography, source URLs — rich enough for Stage B to classify and score without re-researching (Stage B has no Firecrawl/WebSearch access).
+
+### Stage B — Classify & Persist (steps 5–9)
+
+Given Stage A's findings for a company that wasn't skipped (a Stage A skip passes straight through — Stage B does nothing further for it):
+
+5. **Classify.** From what Stage A found, produce a classification object using the exact allowed values below.
+6. **Score.** Run `python scripts/scoring.py score --input '<classification JSON>'` to get `score_total`, `score_breakdown`, `score_breakdown_str`, and `tier`.
+7. **Set status.** `icp_match == "ICP3"` → `status: "watchlist"`, unconditionally, even if `agent_deployment_stage` is already `"Production agents"` on this first pass (promotion only happens on a later `recheck-watchlist` run). `icp_match` in `{"ICP1", "ICP2"}` → `status: "active"` as normal. `icp_match == "Poor fit"` → don't persist to the CSV at all (record under `skipped` per stage-1 triage above). For `recheck-watchlist` runs, this step is superseded by that mode's own status rules (see the `recheck-watchlist` mode section above) — production agents promote to `active`, dead/pivoted companies go `disqualified`, otherwise stay `watchlist`, and the upsert passes `force_refresh: true`.
+8. **Persist.** Merge the classification fields, status, and score fields into one row (see "CSV row — column reference" below) and run `python scripts/csv_store.py upsert --csv "F:\_WORKY\blindsight\GITHUB\lead-gen\data\leads.csv" --input '<row JSON>'`.
+9. **Accumulate** the row into this run's `results` list (or into `skipped` with a reason, for anything stopped at freshness/triage in Stage A or persistence in Stage B).
+
+### Dispatch
+
+Invoke the per-company pipeline via the Workflow tool rather than manual Agent-tool batching — a company that clears Stage A early starts Stage B immediately instead of waiting on the rest of a 5–8-company batch:
+
+```
+Workflow({ scriptPath: "F:\_WORKY\blindsight\GITHUB\lead-gen\.claude\skills\find-leads\scripts\research-pipeline.js", args: { companies: [{domain, company_name}, ...], mode: "<discover|score-list|recheck-watchlist>" } })
+```
+
+Use the returned `results`/`skipped` (and, for `recheck-watchlist`, `rechecked`) in place of manually aggregating per-company subagent output — see "After all companies in the run are processed" below.
 
 ### Classification field values (must match exactly — `scoring.py` rejects anything else)
 
@@ -190,7 +210,7 @@ Only store what's already publicly published (name + title). Never add personal 
 
 ## After all companies in the run are processed
 
-For `discover`/`score-list`, run:
+For `discover`/`score-list`, use the `results` and `skipped` lists returned by the Workflow `pipeline()` run (see "Dispatch" above) and run:
 ```
 python scripts/report.py --mode <discover|score-list> --segment <segment-or-omit> --date <YYYY-MM-DD> --results '<JSON list of result rows>' --skipped '<JSON list of {company_name, reason}>' --out "F:\_WORKY\blindsight\GITHUB\lead-gen\runs\<YYYY-MM-DD>-<mode>-<segment-or-list>.md"
 ```
