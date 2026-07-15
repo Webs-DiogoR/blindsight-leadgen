@@ -123,7 +123,7 @@ Use the returned `results`/`skipped` (and, for `recheck-watchlist`, `rechecked`)
 
 - `icp_match`: `ICP1` | `ICP2` | `ICP3` | `Poor fit` — primary classification. Pick the strongest/primary fit; if a company plausibly fits more than one ICP (e.g. an AI-native product company that also handles regulated data), note the secondary fit in `rationale` rather than losing it.
 - `vertical`: `fintech` | `healthtech` | `insurtech` | `legaltech` | `hr-tech` | `other` | *(blank)* — populate **only** when `icp_match = ICP2`; leave blank for ICP1/ICP3.
-- `persona_match`: one of `1A`, `1B`, `1C`, `2A`, `2B`, `2C`, `3A`, `3B`, `3C`, or `"No clear match"` — whichever defined persona the identified buyer maps to (see "The ICP" personas above).
+- `persona_match`: one of `1A`, `1B`, `1C`, `2A`, `2B`, `2C`, `3A`, `3B`, `3C`, or `"No clear match"` — whichever defined persona the identified buyer maps to (see `docs/brand/personas.md` for what each code means).
 - `company_stage`: `On-target` | `Adjacent` | `Out of range` — On-target = Series A–B for ICP1/ICP3, growing mid-market for ICP2. Adjacent = one stage off (late seed, Series C). Out of range = pre-seed or enterprise/public.
 - `ai_native_maturity`: `Strong` | `Moderate` | `Weak/Unknown` — proprietary LLM/RAG/ML shipping continuously in production. Assess for every company regardless of `icp_match`.
 - `regulatory_data_exposure`: `Explicit` | `Implicit` | `None apparent` — regulated/sensitive data handling with AI touching it. Assess for every company.
