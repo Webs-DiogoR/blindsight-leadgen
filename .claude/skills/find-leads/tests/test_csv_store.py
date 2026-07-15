@@ -6,6 +6,7 @@ from datetime import date
 
 from scripts.csv_store import (
     load_leads, save_leads, upsert_lead, is_active, is_watchlist, FIELDNAMES,
+    check_fresh_status,
 )
 
 BASE_FIELDS = {
@@ -103,6 +104,25 @@ class CsvStoreTests(unittest.TestCase):
 
     def test_is_watchlist_false_when_status_active(self):
         self.assertFalse(is_watchlist({"status": "active"}))
+
+    def test_check_fresh_status_missing_when_no_row(self):
+        self.assertEqual(check_fresh_status(None, date(2026, 7, 9)), "missing")
+
+    def test_check_fresh_status_fresh_when_recent(self):
+        row = dict(BASE_FIELDS, last_researched="2026-07-01")
+        self.assertEqual(check_fresh_status(row, date(2026, 7, 9)), "fresh")
+
+    def test_check_fresh_status_stale_when_old(self):
+        row = dict(BASE_FIELDS, last_researched="2026-01-01")
+        self.assertEqual(check_fresh_status(row, date(2026, 7, 9)), "stale")
+
+    def test_check_fresh_status_disqualified_wins_over_freshness(self):
+        row = dict(BASE_FIELDS, status="disqualified", last_researched="2026-07-01")
+        self.assertEqual(check_fresh_status(row, date(2026, 7, 9)), "disqualified")
+
+    def test_check_fresh_status_customer_wins_over_staleness(self):
+        row = dict(BASE_FIELDS, status="customer", last_researched="2026-01-01")
+        self.assertEqual(check_fresh_status(row, date(2026, 7, 9)), "customer")
 
 
 if __name__ == "__main__":

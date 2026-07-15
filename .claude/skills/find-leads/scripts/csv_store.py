@@ -78,6 +78,20 @@ def upsert_lead(leads: dict, fields: dict, today: date,
     return new_leads, ("updated" if existing else "inserted")
 
 
+def check_fresh_status(row: dict | None, today: date,
+                        freshness_days: int = DEFAULT_FRESHNESS_DAYS) -> str:
+    """Returns 'missing' | 'disqualified' | 'customer' | 'fresh' | 'stale' for a candidate domain.
+
+    disqualified/customer wins over freshness so a candidate discover would
+    otherwise resurface (once its freshness window lapses) stays excluded.
+    """
+    if row is None:
+        return "missing"
+    if row.get("status") in ("disqualified", "customer"):
+        return row["status"]
+    return "fresh" if is_fresh(row, today, freshness_days) else "stale"
+
+
 def is_active(row: dict) -> bool:
     return row.get("status", "active") == "active"
 
@@ -105,13 +119,7 @@ def _cli(argv=None):
 
     if args.command == "check-fresh":
         leads = load_leads(args.csv)
-        row = leads.get(args.domain)
-        if row is None:
-            print("missing")
-        elif is_fresh(row, today, args.freshness_days):
-            print("fresh")
-        else:
-            print("stale")
+        print(check_fresh_status(leads.get(args.domain), today, args.freshness_days))
     elif args.command == "upsert":
         leads = load_leads(args.csv)
         fields = json.loads(args.input)
