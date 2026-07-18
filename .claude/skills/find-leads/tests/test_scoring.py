@@ -5,7 +5,7 @@ from scripts.scoring import compute_score, format_breakdown, InvalidClassificati
 ICP1_STRONG = {
     "icp_match": "ICP1",
     "ai_native_maturity": "Strong",
-    "size_fit": "In range (20-200)",
+    "size_fit": "In range",
     "company_stage": "On-target",
     "geo_fit": "EU",
     "buyer_accessibility": "Named",
@@ -15,7 +15,7 @@ ICP1_STRONG = {
 ICP2_STRONG = {
     "icp_match": "ICP2",
     "regulatory_data_exposure": "Explicit",
-    "size_fit": "In range (20-200)",
+    "size_fit": "In range",
     "company_stage": "On-target",
     "geo_fit": "EU",
     "buyer_accessibility": "Named",
@@ -25,7 +25,7 @@ ICP2_STRONG = {
 ICP3_PRODUCTION = {
     "icp_match": "ICP3",
     "agent_deployment_stage": "Production agents",
-    "size_fit": "In range (20-200)",
+    "size_fit": "In range",
     "company_stage": "On-target",
     "geo_fit": "EU",
     "buyer_accessibility": "Named",

@@ -42,7 +42,7 @@ CORE_SIGNAL_BY_ICP = {
 }
 
 SIZE_FIT_POINTS = {
-    "In range (20-200)": 15,
+    "In range": 15,
     "Out of range": 0,
 }
 

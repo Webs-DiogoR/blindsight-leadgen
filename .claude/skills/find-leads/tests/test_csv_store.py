@@ -20,7 +20,7 @@ BASE_FIELDS = {
     "regulatory_data_exposure": "None apparent",
     "agent_deployment_stage": "None",
     "geo_fit": "EU",
-    "size_fit": "In range (20-200)",
+    "size_fit": "In range",
     "buyer_name": "Jane Doe",
     "buyer_title": "CTO",
     "buyer_accessibility": "Named",
