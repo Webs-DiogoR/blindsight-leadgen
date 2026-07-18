@@ -26,16 +26,10 @@ Research subagents use the Firecrawl CLI (`firecrawl search|scrape|map`) instead
 ## The ICP
 
 Full ICP tier and persona definitions live in the source-of-truth repo:
-`F:\_WORKY\blindsight\GITHUB\docs\brand\personas.md`. Three tiers,
-sequenced by priority — ICP1 and ICP2 are where the team spends now;
-ICP3 is a watchlist populated today but not actively closed until the
-Authorization Broker is past prototype:
-
-| Tier | Name | Lead product |
-|---|---|---|
-| ICP1 | AI-Native Product Companies | Runtime Security Proxy |
-| ICP2 | Sensitive-Data Adopters | ShadowAI → Runtime Proxy |
-| ICP3 | Agentic Companies (watchlist) | Authorization Broker (prototype) |
+`F:\_WORKY\blindsight\GITHUB\docs\brand\personas.md` — read it directly
+rather than relying on a summary here; this file intentionally does not
+restate tier names, lead products, or priority sequencing, since that
+content already lives there and would drift out of sync if duplicated.
 
 Stage B (classify & persist, below) must read `docs/brand/personas.md`
 before assigning `icp_match`/`persona_match` — it is not optional
@@ -72,15 +66,20 @@ This mode is meant to run on a weekly schedule (wired up separately via a Claude
 
 ## ICP segments & weights (for `discover` with no `--segments` override)
 
-Run `python scripts/segments.py --target <N>` to get the JSON per-segment allocation (or add `--segments a,b,c` to split evenly across an explicit list instead). Valid segment keys: `icp1`, `icp2`, `icp3`.
+Valid segment keys: `icp1`, `icp2`, `icp3`. There is no fixed default
+weighting — before running `segments.py`, read
+`docs/brand/personas.md`'s ICP priority framing (which tiers the team
+spends on now vs. seeds for later) and decide a positive-integer weight
+per tier that reflects it, fresh each `discover` run rather than reusing
+a memorized split. Then run:
 
-Default weighting (~40/40/20, reflecting "ICP1/ICP2 spend now, ICP3 seed now"):
+```
+python scripts/segments.py --target <N> --weights icp1=<w1>,icp2=<w2>,icp3=<w3>
+```
 
-| Segment key | ICP | Weight |
-|---|---|---|
-| `icp1` | AI-Native Product Companies | 40% |
-| `icp2` | Sensitive-Data Adopters | 40% |
-| `icp3` | Agentic Companies (watchlist) | 20% |
+using your derived weights, to get the JSON per-segment allocation. (Or
+add `--segments a,b,c` instead to split evenly across an explicit list,
+ignoring weights.)
 
 When search across segments turns up the same company more than once (e.g. it matches both ICP1 and ICP2 searches), dedup the candidate list by domain *before* starting research on any of them.
 
@@ -124,12 +123,12 @@ Use the returned `results`/`skipped` (and, for `recheck-watchlist`, `rechecked`)
 - `icp_match`: `ICP1` | `ICP2` | `ICP3` | `Poor fit` — primary classification. Pick the strongest/primary fit; if a company plausibly fits more than one ICP (e.g. an AI-native product company that also handles regulated data), note the secondary fit in `rationale` rather than losing it.
 - `vertical`: `fintech` | `healthtech` | `insurtech` | `legaltech` | `hr-tech` | `other` | *(blank)* — populate **only** when `icp_match = ICP2`; leave blank for ICP1/ICP3.
 - `persona_match`: one of `1A`, `1B`, `1C`, `2A`, `2B`, `2C`, `3A`, `3B`, `3C`, or `"No clear match"` — whichever defined persona the identified buyer maps to (see `docs/brand/personas.md` for what each code means).
-- `company_stage`: `On-target` | `Adjacent` | `Out of range` — On-target = Series A–B for ICP1/ICP3, growing mid-market for ICP2. Adjacent = one stage off (late seed, Series C). Out of range = pre-seed or enterprise/public.
+- `company_stage`: `On-target` | `Adjacent` | `Out of range` — read the current stage expectations for the matched ICP tier from `docs/brand/personas.md` at classification time rather than a memorized range; judge On-target/Adjacent/Out of range against what it currently states.
 - `ai_native_maturity`: `Strong` | `Moderate` | `Weak/Unknown` — proprietary LLM/RAG/ML shipping continuously in production. Assess for every company regardless of `icp_match`.
 - `regulatory_data_exposure`: `Explicit` | `Implicit` | `None apparent` — regulated/sensitive data handling with AI touching it. Assess for every company.
 - `agent_deployment_stage`: `Production agents` | `Piloting/building` | `Exploring/considering` | `None` — autonomous agents taking actions/calling tools/transacting. Assess for every company; this is also the ICP3 watchlist-promotion trigger.
 - `geo_fit`: `EU` | `US` | `Other` — all three ICPs are EU-first, US second.
-- `size_fit`: `In range (20-200)` | `Out of range`
+- `size_fit`: `In range` | `Out of range` — read the current employee-count range from `docs/brand/personas.md` at classification time rather than a memorized number.
 - `buyer_accessibility`: `Named` | `Known but unclear` | `Unknown`
 - `wrong_fit_risk`: boolean — true if the company's public content suggests it needs infrastructure/identity security rather than AI/data security. Does not disqualify; changes routing/rationale framing.
 
