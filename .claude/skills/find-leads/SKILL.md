@@ -39,7 +39,7 @@ background reading, the classification enums require it.
 
 ### `discover [segment] [--target N] [--segments a,b,c]`
 
-Searches the web for new candidate companies matching the ICP. Default target: 15 new leads. With no segment/`--segments` given, sweeps all three ICPs using the weighted split below.
+Searches the web for new candidate companies matching the ICP. Default target: 15 new leads. With no segment/`--segments` given, sweeps all three ICPs using the per-run weighting decided below.
 
 ### `score-list <companies>`
 

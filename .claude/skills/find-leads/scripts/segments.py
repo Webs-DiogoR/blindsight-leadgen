@@ -80,7 +80,13 @@ def _cli(argv=None):
         parser.error("pass exactly one of --weights or --segments")
 
     segments = args.segments.split(",") if args.segments else None
-    weights = _parse_weights(args.weights) if args.weights else None
+    if args.weights:
+        try:
+            weights = _parse_weights(args.weights)
+        except ValueError:
+            parser.error(f"--weights must be comma-separated key=value pairs with integer values, got {args.weights!r}")
+    else:
+        weights = None
     print(json.dumps(split_target(args.target, weights=weights, segments=segments)))
 
 
